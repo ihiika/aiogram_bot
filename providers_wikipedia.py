@@ -2,15 +2,9 @@ import httpx
 import html
 import asyncio
 
-from dataclasses import dataclass
+from models import SearchResult
 
 
-@dataclass
-class SearchResult:
-    title: str
-    description: str
-    url: str
-    source: str
 
 def clean_snippet(text):
     text = text.replace('<span class="searchmatch">', "")

@@ -1,7 +1,7 @@
 import httpx
 import asyncio
 
-from providers_wikipedia import SearchResult
+from models import SearchResult
 
 
 async def search_github(query):
