@@ -28,7 +28,7 @@ async def search_wikipedia(query):
         'format': "json",  # нужен json
     }
     async with httpx.AsyncClient() as client:
-        response = await client.get("https://en.wikipedia.org/w/api.php", params=params, headers={"User-Agent": "aiogram_bot/1.0"})
+        response = await client.get("https://en.wikipedia.org/w/api.php", params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"})
     if response.status_code != 200:
         raise RuntimeError(f"WIKI STATUS: {response.status_code}")
     data = response.json()
@@ -50,8 +50,7 @@ async def main():
     result = await search_wikipedia("GIT")
     print(result)
 
-
-
-asyncio.run(main())
+if __name__ == '__main__':
+    asyncio.run(main())
 
 
