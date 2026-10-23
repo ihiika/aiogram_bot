@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
-from providers_wikipedia import search_wikipedia
+from search_service import search_all
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,7 +27,7 @@ async def any_text(message: Message):
         return await message.reply("The requested text is empty")
     await message.answer(f"You were looking for: {query}")
     try:
-        results = await search_wikipedia(query)
+        results = await search_all(query)
     except Exception as e:
         logger.exception("Wikipedia search failed for query=%r", query)
         return await message.reply("Something went wrong")
