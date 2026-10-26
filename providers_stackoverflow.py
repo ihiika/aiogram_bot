@@ -18,6 +18,8 @@ async def search_stackoverflow(query):
     if response.status_code != 200:
         raise RuntimeError(f"StackOverFlow STATUS: {response.status_code}  {response.text[:200]}")
     data = response.json()
+    #print(data.keys())  # ключи верхнего уровня
+    #print(data["items"][0].keys())  # ключи одного элемента
     results = data['items']
 
     new_list = []
@@ -28,7 +30,7 @@ async def search_stackoverflow(query):
     return new_list
 
 async def main():
-    results = await search_stackoverflow("jfrfkrfef")
+    results = await search_stackoverflow("git")
     print(results)
 
 if __name__ == "__main__":
