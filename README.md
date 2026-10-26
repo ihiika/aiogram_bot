@@ -5,9 +5,6 @@ three public sources at the same time: **Wikipedia**, **GitHub** and
 **Stack Overflow**. Results from all sources are merged into one unified
 format and sent back to the user.
 
-This is a learning project for a Python backend course. Its main goal is to
-practice `asyncio`, working with external HTTP APIs, and handling their
-failures.
 
 ## Features
 
