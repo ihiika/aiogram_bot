@@ -4,7 +4,7 @@ import asyncio
 from models import SearchResult
 
 
-async def search_github(query):
+async def search_github(query: str) -> list[SearchResult]:
     params = {
         "q": query,
         "per_page": 5,
@@ -31,7 +31,7 @@ async def search_github(query):
         ))
     return new_list
 
-async def main():
+async def main() -> None:
     results = await search_github("ijfefwe8d3m28423")
     print(results)
 

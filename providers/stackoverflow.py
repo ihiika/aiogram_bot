@@ -4,7 +4,7 @@ import html
 
 from models import SearchResult
 
-async def search_stackoverflow(query):
+async def search_stackoverflow(query: str) -> list[SearchResult]:
     params = {
         'site': 'stackoverflow',
         'q': query,
@@ -29,7 +29,7 @@ async def search_stackoverflow(query):
 
     return new_list
 
-async def main():
+async def main() -> None:
     results = await search_stackoverflow("git")
     print(results)
 

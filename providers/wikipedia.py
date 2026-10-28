@@ -6,14 +6,14 @@ from models import SearchResult
 
 
 
-def clean_snippet(text):
+def clean_snippet(text: str) -> str:
     text = text.replace('<span class="searchmatch">', "")
     text = text.replace('</span>', "")
     text = html.unescape(text)
     return text
 
 
-async def search_wikipedia(query):
+async def search_wikipedia(query: str) -> list[SearchResult]:
     params = {
         'action': "query",  # выбирает тип, чтение а не редактирование например
         'list': "search",  # список результатов поиска
@@ -22,7 +22,7 @@ async def search_wikipedia(query):
         'format': "json",  # нужен json
     }
     async with httpx.AsyncClient() as client:
-        response = await client.get("https://en.wikipedia.org/w/api.php", params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"})
+        response = await client.get("https://en.w   ikipedia.org/w/api.php", params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"})
     if response.status_code != 200:
         raise RuntimeError(f"WIKI STATUS: {response.status_code}")
     data = response.json()
@@ -40,7 +40,7 @@ async def search_wikipedia(query):
         ))
     return new_list
 
-async def main():
+async def main() -> None:
     result = await search_wikipedia("GIT")
     print(result)
 
