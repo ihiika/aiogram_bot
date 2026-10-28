@@ -27,19 +27,27 @@ async def any_text(message: Message):
         return await message.reply("The requested text is empty")
     await message.answer(f"You were looking for: {query}")
     try:
-        results = await search_all(query)
-    except Exception as e:
-        logger.exception("Wikipedia search failed for query=%r", query)
+        outcome = await search_all(query)
+    except Exception:
+        logger.exception("search for all sources failed for query=%r", query)
         return await message.reply("Something went wrong")
-    lines = []
-    if results:
-        for item in results:
-            lines.append(f"{item.title}: {item.description} \nLink: {item.url} \nSource: {item.source}\n")
-        text = "\n".join(lines)
-        return await message.answer(text)
-    return await message.reply("No results found")
+    list_of_records = []
+    answers_for_failed_sources = ""
+    if outcome.results:
+        for item in outcome.results:
+            list_of_records.append(f"{item.title}: {item.description} \nLink: {item.url} \nSource: {item.source}\n")
+    answers_for_records = "\n".join(list_of_records)
 
+    if outcome.failed_sources:
+        answers_for_failed_sources = "Unavailable: " + ", ".join(outcome.failed_sources)
 
+    if outcome.all_failed:
+        return await message.reply("All sources failed. Try again later")
+    elif not outcome.results and outcome.failed_sources:
+        await message.reply(f"No results from the available sources. {answers_for_failed_sources}")
+    elif not outcome.results:
+        return await message.reply("No results found")
+    return await message.reply(f"{answers_for_records} \n\n{answers_for_failed_sources}")
 
 
 @dp.message()

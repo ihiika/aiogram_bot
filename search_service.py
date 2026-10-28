@@ -1,15 +1,26 @@
 import asyncio
+import logging
 
+from models import SearchOutcome
 from providers_stackoverflow import search_stackoverflow
 from providers_wikipedia import search_wikipedia
 from providers_github import search_github
 
+logger = logging.getLogger(__name__)
+
 async def search_all(query):
     new_list = []
-    search_all_providers = await asyncio.gather(search_wikipedia(query), search_github(query), search_stackoverflow(query))
-    for one_provider in search_all_providers:
-        new_list.extend(one_provider)
-    return new_list
+    down_sources = []
+    list_of_sources = [ "Wikipedia",  "GitHub",  "Stack Overflow" ]
+    search_all_providers = await asyncio.gather(search_wikipedia(query), search_github(query), search_stackoverflow(query), return_exceptions=True)
+    for source, one_provider in zip(list_of_sources, search_all_providers):
+        if isinstance(one_provider, Exception):
+            logger.error("Provider %s failed: %r", source, one_provider)
+            down_sources.append(source)
+        else:
+            new_list.extend(one_provider)
+    return SearchOutcome(results=new_list, failed_sources=down_sources, total_sources=len(list_of_sources))
+
 
 async def search_all_sequential(query):
     providers_results = []

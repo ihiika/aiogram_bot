@@ -3,8 +3,13 @@
 A Telegram bot built with **aiogram 3** that takes a text query and searches
 three public sources at the same time: **Wikipedia**, **GitHub** and
 **Stack Overflow**. Results from all sources are merged into one unified
-format and sent back to the user.
+format and sent back to the user. If one source fails, the others still
+respond.
 
+## Requirements
+
+- Python 3.12 or newer (developed and tested on Python 3.14)
+- A Telegram bot token from [@BotFather](https://t.me/BotFather)
 
 ## Features
 
@@ -16,6 +21,7 @@ format and sent back to the user.
 - A unified `SearchResult` dataclass: `title`, `description`, `url`, `source`.
 - Concurrent search with `asyncio.gather`, plus a sequential version kept for
   timing comparison.
+- Partial failure handling: a failing provider does not break the whole search.
 - Basic input validation (empty messages) and error logging.
 
 ## Project structure
@@ -23,7 +29,7 @@ format and sent back to the user.
 ```
 .
 ├── bot.py                    # aiogram bot: handlers and entry point
-├── models.py                 # SearchResult dataclass
+├── models.py                 # SearchResult and SearchOutcome dataclasses
 ├── search_service.py         # search_all (concurrent), search_all_sequential
 ├── providers_wikipedia.py    # Wikipedia provider
 ├── providers_github.py       # GitHub provider
@@ -76,8 +82,30 @@ the response, cleans the data (for example, HTML tags in Wikipedia snippets) and
 maps it to `SearchResult`.
 
 `search_service.search_all(query)` starts all three providers at once with
-`asyncio.gather` and returns one flat list. `search_all_sequential(query)` calls
-them one after another and exists only for comparison.
+`asyncio.gather` and returns a `SearchOutcome`:
+
+- `results`: a flat list of `SearchResult` from the providers that responded;
+- `failed_sources`: names of the providers that raised an error;
+- `total_sources`: how many providers were queried;
+- `all_failed`: a property, `True` when every provider failed.
+
+`search_all_sequential(query)` calls the providers one after another and exists
+only for timing comparison.
+
+## Handling failures
+
+`asyncio.gather` is called with `return_exceptions=True`, so an exception in one
+provider is returned as a value instead of cancelling the others. Each failure
+is logged with the provider name and the error. The bot then answers depending
+on the situation:
+
+| Situation | Bot reply |
+|---|---|
+| Results found, all sources responded | The results |
+| Results found, some sources failed | The results and an `Unavailable: ...` line |
+| No results, some sources failed | A note that nothing was found and which sources are unavailable |
+| No results, all sources responded | `No results found` |
+| All sources failed | `All sources failed. Try again later` |
 
 ## Benchmark: concurrent vs sequential
 
@@ -113,6 +141,9 @@ Caveats:
 - The Stack Overflow description currently contains only the question score.
 - Long result lists may exceed Telegram's message length limit (about 4096
   characters).
+- `search_all_sequential` does not handle provider failures and returns a plain
+  list; it is used only for timing.
+- There are no timeouts for providers yet.
 
 ## Roadmap
 
@@ -121,7 +152,7 @@ Caveats:
 - [x] GitHub provider
 - [x] Stack Overflow provider
 - [x] Concurrent search and timing comparison
-- [ ] Partial failures: one source fails, the others still respond
+- [x] Partial failures: one source fails, the others still respond
 - [ ] Timeouts for each provider
 - [ ] Limiting concurrent requests under load (`asyncio.Semaphore`)
 - [ ] Optional: queue and workers
