@@ -2,9 +2,9 @@ import asyncio
 import logging
 
 from models import SearchOutcome
-from providers_stackoverflow import search_stackoverflow
-from providers_wikipedia import search_wikipedia
-from providers_github import search_github
+from providers.stackoverflow import search_stackoverflow
+from providers.wikipedia import search_wikipedia
+from providers.github import search_github
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,6 @@ async def search_all(query):
         else:
             new_list.extend(one_provider)
     return SearchOutcome(results=new_list, failed_sources=down_sources, total_sources=len(list_of_sources))
-
 
 async def search_all_sequential(query):
     providers_results = []

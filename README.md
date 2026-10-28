@@ -12,7 +12,6 @@ respond.
 - A Telegram bot token from [@BotFather](https://t.me/BotFather)
 
 ## Features
-
 - Free-text search: send any message to the bot and get results from all sources.
 - Three search providers, each in its own module:
   - Wikipedia (MediaWiki API)
@@ -109,7 +108,7 @@ on the situation:
 
 ## Benchmark: concurrent vs sequential
 
-`benchmark.py` measures how long each version takes for the same query.
+`scripts/benchmark.py` measures how long each version takes for the same query.
 
 Measured on a local machine, query `"python"`, 5 runs per version:
 
