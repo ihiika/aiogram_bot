@@ -12,6 +12,7 @@ respond.
 - A Telegram bot token from [@BotFather](https://t.me/BotFather)
 
 ## Features
+
 - Free-text search: send any message to the bot and get results from all sources.
 - Three search providers, each in its own module:
   - Wikipedia (MediaWiki API)
@@ -22,20 +23,23 @@ respond.
   timing comparison.
 - Partial failure handling: a failing provider does not break the whole search.
 - Basic input validation (empty messages) and error logging.
+- Type hints across the codebase.
 
 ## Project structure
 
 ```
 .
-├── bot.py                    # aiogram bot: handlers and entry point
-├── models.py                 # SearchResult and SearchOutcome dataclasses
-├── search_service.py         # search_all (concurrent), search_all_sequential
-├── providers_wikipedia.py    # Wikipedia provider
-├── providers_github.py       # GitHub provider
-├── providers_stackoverflow.py# Stack Overflow provider
-├── benchmark.py              # timing: concurrent vs sequential
-├── requirements.txt          # dependencies
-└── token.env.example         # example of the environment file
+├── bot.py                     # aiogram bot: handlers and entry point
+├── models.py                  # SearchResult and SearchOutcome dataclasses
+├── search_service.py          # search_all (concurrent), search_all_sequential
+├── providers/
+│   ├── wikipedia.py           # Wikipedia provider
+│   ├── github.py              # GitHub provider
+│   └── stackoverflow.py       # Stack Overflow provider
+├── scripts/
+│   └── benchmark.py           # timing: concurrent vs sequential
+├── requirements.txt           # dependencies
+└── token.env.example          # example of the environment file
 ```
 
 ## Setup
@@ -80,7 +84,11 @@ list of `SearchResult` objects. It sends an HTTP request with `httpx`, checks
 the response, cleans the data (for example, HTML tags in Wikipedia snippets) and
 maps it to `SearchResult`.
 
-`search_service.search_all(query)` starts all three providers at once with
+The providers are registered in the `DICT_OF_SOURCES` dictionary in
+`search_service.py` (source name -> provider function). To add a source, write a
+new provider and add it to the dictionary.
+
+`search_service.search_all(query)` starts all registered providers at once with
 `asyncio.gather` and returns a `SearchOutcome`:
 
 - `results`: a flat list of `SearchResult` from the providers that responded;
@@ -88,8 +96,9 @@ maps it to `SearchResult`.
 - `total_sources`: how many providers were queried;
 - `all_failed`: a property, `True` when every provider failed.
 
-`search_all_sequential(query)` calls the providers one after another and exists
-only for timing comparison.
+`search_all_sequential(query)` calls the three providers one after another and
+exists only for timing comparison. It lists the providers by hand and does not
+use `DICT_OF_SOURCES`.
 
 ## Handling failures
 
@@ -109,6 +118,14 @@ on the situation:
 ## Benchmark: concurrent vs sequential
 
 `scripts/benchmark.py` measures how long each version takes for the same query.
+Run it from the project root:
+
+```bash
+python -m scripts.benchmark
+```
+
+The `-m` form is needed so that imports like `from search_service import ...`
+resolve from the project root.
 
 Measured on a local machine, query `"python"`, 5 runs per version:
 
@@ -131,6 +148,8 @@ Caveats:
 - The same query was used in every run, so server-side caching may make the
   numbers look better than real usage.
 - Five runs per version is a small sample.
+- GitHub search without a token allows about 10 requests per minute, so many
+  repeated runs can start failing.
 
 ## Known limitations
 
@@ -142,7 +161,7 @@ Caveats:
   characters).
 - `search_all_sequential` does not handle provider failures and returns a plain
   list; it is used only for timing.
-- There are no timeouts for providers yet.
+- There are no explicit timeouts for providers yet (only the `httpx` default).
 
 ## Roadmap
 
@@ -154,6 +173,7 @@ Caveats:
 - [x] Partial failures: one source fails, the others still respond
 - [ ] Timeouts for each provider
 - [ ] Limiting concurrent requests under load (`asyncio.Semaphore`)
+- [ ] Richer results (GitHub stars and language, Stack Overflow answer count)
 - [ ] Optional: queue and workers
 
 ## Tech stack
