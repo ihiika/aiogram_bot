@@ -22,7 +22,7 @@ async def search_wikipedia(query: str) -> list[SearchResult]:
         'format': "json",  # нужен json
     }
     async with httpx.AsyncClient() as client:
-        response = await client.get("https://en.w   ikipedia.org/w/api.php", params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"})
+        response = await client.get("https://en.wikipedia.org/w/api.php", params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"})
     if response.status_code != 200:
         raise RuntimeError(f"WIKI STATUS: {response.status_code}")
     data = response.json()
