@@ -3,6 +3,7 @@ import html
 import asyncio
 
 from models import SearchResult
+from config import HTTP_CONNECT_TIMEOUT, HTTP_READ_TIMEOUT
 
 
 
@@ -22,7 +23,8 @@ async def search_wikipedia(query: str) -> list[SearchResult]:
         'format': "json",  # нужен json
     }
     async with httpx.AsyncClient() as client:
-        response = await client.get("https://en.wikipedia.org/w/api.php", params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"})
+        timeout = httpx.Timeout(2, connect=HTTP_CONNECT_TIMEOUT, read=HTTP_READ_TIMEOUT)
+        response = await client.get("https://en.wikipedia.org/w/api.php", params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"}, timeout=timeout)
     if response.status_code != 200:
         raise RuntimeError(f"WIKI STATUS: {response.status_code}")
     data = response.json()

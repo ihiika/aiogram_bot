@@ -2,6 +2,7 @@ import httpx
 import asyncio
 
 from models import SearchResult
+from config import HTTP_CONNECT_TIMEOUT, HTTP_READ_TIMEOUT
 
 
 async def search_github(query: str) -> list[SearchResult]:
@@ -11,10 +12,12 @@ async def search_github(query: str) -> list[SearchResult]:
     }
 
     async with httpx.AsyncClient() as client:
+        timeout = httpx.Timeout(2, connect=HTTP_CONNECT_TIMEOUT, read=HTTP_READ_TIMEOUT)
         response = await client.get(
         "https://api.github.com/search/repositories",
         params=params,
         headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)", "Accept": "application/vnd.github+json"},
+        timeout=timeout,
     )
     if response.status_code != 200:
         raise RuntimeError(f"GITHUB STATUS: {response.status_code}  {response.text[:200]}")

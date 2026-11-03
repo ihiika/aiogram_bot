@@ -3,6 +3,7 @@ import httpx
 import html
 
 from models import SearchResult
+from config import HTTP_CONNECT_TIMEOUT, HTTP_READ_TIMEOUT
 
 async def search_stackoverflow(query: str) -> list[SearchResult]:
     params = {
@@ -12,7 +13,8 @@ async def search_stackoverflow(query: str) -> list[SearchResult]:
         'sort': 'relevance',
     }
     async with httpx.AsyncClient() as client:
-        response = await client.get("https://api.stackexchange.com/2.3/search/advanced",
+        timeout = httpx.Timeout(2, connect=HTTP_CONNECT_TIMEOUT, read=HTTP_READ_TIMEOUT)
+        response = await client.get("https://api.stackexchange.com/2.3/search/advanced", timeout=timeout,
         params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"})
 
     if response.status_code != 200:

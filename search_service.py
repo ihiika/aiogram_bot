@@ -6,6 +6,7 @@ from models import SearchResult
 from providers.stackoverflow import search_stackoverflow
 from providers.wikipedia import search_wikipedia
 from providers.github import search_github
+from config import PROVIDER_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,6 @@ DICT_OF_SOURCES =  {
     "GitHub": search_github,
     "Stack Overflow": search_stackoverflow
     }
-PROVIDER_TIMEOUT = 3
 
 async def search_all(query: str) -> SearchOutcome:
     new_list = []
