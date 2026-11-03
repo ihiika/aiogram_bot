@@ -1,7 +1,7 @@
 import asyncio
 
 from typing import Any
-from collections.abc import Callable, Awaitableп
+from collections.abc import Callable, Awaitable
 from time import perf_counter
 from search_service import search_all, search_all_sequential
 

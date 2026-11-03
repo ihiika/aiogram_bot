@@ -14,14 +14,18 @@ DICT_OF_SOURCES =  {
     "GitHub": search_github,
     "Stack Overflow": search_stackoverflow
     }
+PROVIDER_TIMEOUT = 3
 
 async def search_all(query: str) -> SearchOutcome:
     new_list = []
     down_sources = []
 
-    search_all_providers = await asyncio.gather(*(provider_func(query) for provider_func in DICT_OF_SOURCES.values()), return_exceptions=True)
+    search_all_providers = await asyncio.gather(*(asyncio.wait_for(provider_func(query), timeout=PROVIDER_TIMEOUT) for provider_func in DICT_OF_SOURCES.values()), return_exceptions=True)
     for source, one_provider in zip(DICT_OF_SOURCES, search_all_providers):
-        if isinstance(one_provider, Exception):
+        if isinstance(one_provider, TimeoutError):
+            logger.warning("Provider %s timed out. Limit is:  %s s", source, PROVIDER_TIMEOUT)
+            down_sources.append(source)
+        elif isinstance(one_provider, Exception):
             logger.error("Provider %s failed: %r", source, one_provider)
             down_sources.append(source)
         else:
