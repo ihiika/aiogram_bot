@@ -20,12 +20,8 @@ async def search_stackoverflow(query: str) -> list[SearchResult]:
     if response.status_code != 200:
         raise RuntimeError(f"StackOverFlow STATUS: {response.status_code}  {response.text[:200]}")
     data = response.json()
-    #print(data.keys())  # ключи верхнего уровня
-    #print(data["items"][0].keys())  # ключи одного элемента
     results = data['items']
-
     new_list = []
-
     for result in results:
         new_list.append(SearchResult(html.unescape(result["title"]),  f"Score: {result['score']}", result["link"], "Stackoverflow"))
 
