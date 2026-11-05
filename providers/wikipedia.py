@@ -26,18 +26,33 @@ async def search_wikipedia(query: str) -> list[SearchResult]:
         timeout = httpx.Timeout(2, connect=HTTP_CONNECT_TIMEOUT, read=HTTP_READ_TIMEOUT)
         response = await client.get("https://en.wikipedia.org/w/api.php", params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"}, timeout=timeout)
     if response.status_code != 200:
-        raise RuntimeError(f"WIKI STATUS: {response.status_code}")
+        raise RuntimeError(f"Wikipedia status: {response.status_code}")
     data = response.json()
-    if data.get('error'):
-        raise RuntimeError(data['error']['info'])
-    results = data['query']['search']
+    error = data.get("error")
+    if error:
+        info = error.get("info")
+        if info:
+            raise RuntimeError(f"Wikipedia error: {info}")
+        raise RuntimeError(f"Wikipedia error without info: {error}")
+    query_part = data.get("query")
+    if query_part is None:
+        raise RuntimeError(f"Wikipedia: no 'query' in response: {response.text[:200]}")
+    results = query_part.get("search")
+    if results is None:
+        raise RuntimeError(f"Wikipedia: no 'search' in 'query': {response.text[:200]}")
 
     new_list = []
     for page in results:
+        title = page.get("title")
+        snippet = page.get("snippet", "No snippet")
+        cleaned_snippet = clean_snippet(snippet)
+        page_id = page.get("pageid")
+        if not title or not page_id:
+            raise RuntimeError(f"Wikipedia: no 'title' or 'pageid' {response.text[:200]}")
         new_list.append(SearchResult(
-            page["title"],
-            clean_snippet(page["snippet"]),
-            f'https://en.wikipedia.org/?curid={page['pageid']}',
+            title,
+            cleaned_snippet,
+            f'https://en.wikipedia.org/?curid={page_id}',
             "Wikipedia"
         ))
     return new_list

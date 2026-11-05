@@ -14,16 +14,23 @@ async def search_stackoverflow(query: str) -> list[SearchResult]:
     }
     async with httpx.AsyncClient() as client:
         timeout = httpx.Timeout(2, connect=HTTP_CONNECT_TIMEOUT, read=HTTP_READ_TIMEOUT)
-        response = await client.get("https://api.stackexchange.com/2.3/search/advanced", timeout=timeout,
+        response = await client.get("https://api.stackexchange.com/2.3/search/advanced",
+        timeout=timeout,
         params=params, headers={"User-Agent": "AiogramBot/1.0 (https://github.com/ihiika/aiogram_bot)"})
 
     if response.status_code != 200:
-        raise RuntimeError(f"StackOverFlow STATUS: {response.status_code}  {response.text[:200]}")
+        raise RuntimeError(f"StackOverFlow status: {response.status_code}  {response.text[:200]}")
     data = response.json()
-    results = data['items']
+    results = data.get("items")
+    if results is None:
+        raise RuntimeError(f"Stack Overflow: no 'items' in response: {response.status_code} {response.text[:200]}")
     new_list = []
     for result in results:
-        new_list.append(SearchResult(html.unescape(result["title"]),  f"Score: {result['score']}", result["link"], "Stackoverflow"))
+        title = result.get("title")
+        link = result.get("link")
+        if not title or not link:
+            raise RuntimeError(f"Stack OverFlow link is without title or link {result}")
+        new_list.append(SearchResult(html.unescape(title), f"Score: {result.get("score", 0)}", link, "Stack Overflow"))
 
     return new_list
 
