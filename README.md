@@ -24,6 +24,8 @@ respond.
 - Partial failure handling: a failing provider does not break the whole search.
 - Timeouts: a slow provider is cut off and reported as unavailable, the others
   still respond.
+- Per-source concurrency limits with `asyncio.Semaphore`, so many users at once
+  do not flood the external sites.
 - Basic input validation (empty messages) and error logging.
 - Type hints across the codebase.
 
@@ -40,7 +42,8 @@ respond.
 │   ├── github.py              # GitHub provider
 │   └── stackoverflow.py       # Stack Overflow provider
 ├── scripts/
-│   └── benchmark.py           # timing: concurrent vs sequential
+│   ├── benchmark.py           # timing: concurrent vs sequential
+│   └── load_test.py           # load test of the per-source semaphores
 ├── requirements.txt           # dependencies
 └── token.env.example          # example of the environment file
 ```
@@ -138,6 +141,48 @@ separately, not to the whole `gather`: if one provider times out, the results
 of the others are kept. A provider that timed out is logged and listed in
 `Unavailable: ...` like any other failed source.
 
+## Concurrency limits (Semaphore)
+
+Many users can search at the same time, and every search sends one request to
+each source. Without a limit, 100 simultaneous users would send 100 requests to
+every site at once. The sources, not the bot, are the bottleneck, so the limit
+is applied **per source**, around the provider call.
+
+- The limits live in `config.py` as a dictionary (source name -> number).
+- `search_service.py` builds one `asyncio.Semaphore` per source at import time,
+  so all users share the same semaphores.
+- `search_with_limit` takes a place in the source's semaphore first and only
+  then starts `asyncio.wait_for`. Time spent waiting in the queue therefore does
+  **not** count against `PROVIDER_TIMEOUT`: a request that waits for a free
+  place is not reported as timed out.
+
+Current limits: Wikipedia 5, GitHub 3, Stack Overflow 10 simultaneous requests.
+These are starting values, not measured optimums.
+
+A semaphore limits how many requests run **at the same time**. It does not
+enforce a rate such as GitHub's "requests per minute".
+
+### Load test
+
+`scripts/load_test.py` replaces the real providers with fakes that sleep for
+0.3 s and count how many of them run at the same moment. It then starts 100
+searches at once. No real site is contacted.
+
+```bash
+python -m scripts.load_test
+```
+
+Result with 100 simultaneous searches:
+
+| Setup | Max simultaneous (Wikipedia / GitHub / Stack Overflow) | Total time |
+|---|---|---|
+| Limits 5 / 3 / 10 | 5 / 3 / 10 | 10.25 s |
+| No effective limit (1000 each) | 100 / 100 / 100 | 0.31 s |
+
+The limits are respected exactly. The price is waiting: the strictest source
+(GitHub, 3 at a time) needs about 100 / 3 x 0.3 s = 10 s for 100 searches.
+There were no failed searches in either run.
+
 ## Benchmark: concurrent vs sequential
 
 `scripts/benchmark.py` measures how long each version takes for the same query.
@@ -186,6 +231,9 @@ Caveats:
   list; it is used only for timing.
 - A provider that times out is reported as unavailable; the bot does not tell
   the user whether it failed or was just slow.
+- Under heavy load users wait in the semaphore queue; there is no limit on how
+  long, and no per-minute rate limiter or cache (GitHub's per-minute limit can
+  still be hit).
 
 ## Roadmap
 
@@ -196,7 +244,7 @@ Caveats:
 - [x] Concurrent search and timing comparison
 - [x] Partial failures: one source fails, the others still respond
 - [x] Timeouts for each provider
-- [ ] Limiting concurrent requests under load (`asyncio.Semaphore`)
+- [x] Limiting concurrent requests under load (`asyncio.Semaphore`)
 - [ ] Richer results (GitHub stars and language, Stack Overflow answer count)
 - [ ] Optional: queue and workers
 
