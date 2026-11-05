@@ -1,12 +1,13 @@
 import asyncio
 import logging
 
-from models import SearchOutcome
-from models import SearchResult
+from collections.abc import Callable, Awaitable
+from typing import Any
+from models import SearchOutcome, SearchResult
 from providers.stackoverflow import search_stackoverflow
 from providers.wikipedia import search_wikipedia
 from providers.github import search_github
-from config import PROVIDER_TIMEOUT
+from config import PROVIDER_TIMEOUT, DICT_OF_SOURCES_SEMAPHORE_LIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +17,20 @@ DICT_OF_SOURCES =  {
     "Stack Overflow": search_stackoverflow
     }
 
+SEMAPHORE_BY_SOURCE = {}
+
+for name, limit in DICT_OF_SOURCES_SEMAPHORE_LIMIT.items():
+    SEMAPHORE_BY_SOURCE[name] = asyncio.Semaphore(limit)
+
+async def search_with_limit(name: str, func: Callable[[str], Awaitable[Any]], query: str) -> list[SearchResult]:
+    async with SEMAPHORE_BY_SOURCE[name]:
+        return await asyncio.wait_for(func(query), timeout=PROVIDER_TIMEOUT)
+
 async def search_all(query: str) -> SearchOutcome:
     new_list = []
     down_sources = []
 
-    search_all_providers = await asyncio.gather(*(asyncio.wait_for(provider_func(query), timeout=PROVIDER_TIMEOUT) for provider_func in DICT_OF_SOURCES.values()), return_exceptions=True)
+    search_all_providers = await asyncio.gather(*(search_with_limit(source, func, query) for source, func in DICT_OF_SOURCES.items()), return_exceptions=True)
     for source, one_provider in zip(DICT_OF_SOURCES, search_all_providers):
         if isinstance(one_provider, TimeoutError):
             logger.warning("Provider %s timed out. Limit is:  %s s", source, PROVIDER_TIMEOUT)
