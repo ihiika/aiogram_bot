@@ -199,10 +199,13 @@ Measured on a local machine, query `"python"`, 5 runs per version:
 
 | Version     | Mean   | Median |
 |-------------|--------|--------|
-| `gather`    | 0.45 s | 0.43 s |
-| sequential  | 1.11 s | 1.16 s |
+| `gather`    | 0.39 s | 0.34 s |
+| sequential  | 0.69 s | 0.68 s |
 
-In this series, the concurrent version was about 2.5 times faster.
+The script prints the mean and median itself (`statistics` module). In this
+series, the concurrent version was about 1.8 times faster by the mean and 2
+times faster by the median. An earlier series gave a larger gap (about 2.5
+times), so the ratio changes from run to run.
 
 Why: sequentially, total time is roughly the **sum** of the three request
 times. With `gather`, the requests wait in parallel, so total time is roughly
