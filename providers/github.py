@@ -29,13 +29,24 @@ async def search_github(query: str) -> list[SearchResult]:
     for repository in results:
         title = repository.get("full_name")
         url = repository.get("html_url")
+        stars = repository.get("stargazers_count")
+        language = repository.get("language")
+        description = repository.get("description") or "no description"
+        extras = []
+        if stars is not None:
+            extras.append(f"Stars: {stars}")
+        if language:
+            extras.append(f"Language: {language}")
+        extra_info = " · ".join(extras)
         if not url or not title:
             raise RuntimeError(f"GitHub: repository without full_name or html_url: {repository}")
+        if extra_info:
+            description += "\n" + extra_info
         new_list.append(SearchResult(
-            title,
-            repository.get("description") or "no description",
-            url,
-            "GitHub",
+            title = title,
+            description = description,
+            url = url,
+            source = "GitHub",
         ))
     return new_list
 

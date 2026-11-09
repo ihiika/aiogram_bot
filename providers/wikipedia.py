@@ -50,10 +50,10 @@ async def search_wikipedia(query: str) -> list[SearchResult]:
         if not title or not page_id:
             raise RuntimeError(f"Wikipedia: no 'title' or 'pageid' {response.text[:200]}")
         new_list.append(SearchResult(
-            title,
-            cleaned_snippet,
-            f'https://en.wikipedia.org/?curid={page_id}',
-            "Wikipedia"
+            title = title,
+            description = cleaned_snippet,
+            url = f'https://en.wikipedia.org/?curid={page_id}',
+            source = "Wikipedia",
         ))
     return new_list
 
