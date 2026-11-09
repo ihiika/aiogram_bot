@@ -1,6 +1,4 @@
 import asyncio
-from enum import nonmember
-
 import httpx
 import html
 
