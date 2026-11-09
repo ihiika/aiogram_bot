@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import httpx
 
 from collections.abc import Callable, Awaitable
 from typing import Any
@@ -32,8 +33,8 @@ async def search_all(query: str) -> SearchOutcome:
 
     search_all_providers = await asyncio.gather(*(search_with_limit(source, func, query) for source, func in DICT_OF_SOURCES.items()), return_exceptions=True)
     for source, one_provider in zip(DICT_OF_SOURCES, search_all_providers):
-        if isinstance(one_provider, TimeoutError):
-            logger.warning("Provider %s timed out. Limit is:  %s s", source, PROVIDER_TIMEOUT)
+        if isinstance(one_provider, (TimeoutError, httpx.TimeoutException)):
+            logger.warning("Provider %s timed out. %r", source, one_provider)
             down_sources.append(source)
         elif isinstance(one_provider, Exception):
             logger.error("Provider %s failed: %r", source, one_provider)
