@@ -1,4 +1,6 @@
 import asyncio
+from enum import nonmember
+
 import httpx
 import html
 
@@ -29,8 +31,18 @@ async def search_stackoverflow(query: str) -> list[SearchResult]:
         title = result.get("title")
         link = result.get("link")
         if not title or not link:
-            raise RuntimeError(f"Stack OverFlow link is without title or link {result}")
-        new_list.append(SearchResult(html.unescape(title), f"Score: {result.get("score", 0)}", link, "Stack Overflow"))
+            raise RuntimeError(f"Stack OverFlow: result is without title or link {result}")
+        answer_count = result.get("answer_count")
+        accepted_answer_id = result.get("accepted_answer_id")
+        has_accepted = accepted_answer_id is not None
+        extras = []
+        extras.append(f"Score: {result.get('score', 0)}")
+        if answer_count is not None:
+            extras.append(f"Answers: {answer_count}")
+        if has_accepted:
+            extras.append("✅")
+        extra_info = " · ".join(extras)
+        new_list.append(SearchResult(title=html.unescape(title), description=extra_info, url=link, source="Stack Overflow"))
 
     return new_list
 
