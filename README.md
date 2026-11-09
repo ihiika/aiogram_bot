@@ -15,9 +15,10 @@ respond.
 
 - Free-text search: send any message to the bot and get results from all sources.
 - Three search providers, each in its own module:
-  - Wikipedia (MediaWiki API)
-  - GitHub (repository search)
-  - Stack Overflow (Stack Exchange API)
+  - Wikipedia (MediaWiki API): title and a cleaned text snippet
+  - GitHub (repository search): description, stars and main language
+  - Stack Overflow (Stack Exchange API): score, number of answers and a mark
+    for questions that have an accepted answer
 - A unified `SearchResult` dataclass: `title`, `description`, `url`, `source`.
 - Concurrent search with `asyncio.gather`, plus a sequential version kept for
   timing comparison.
@@ -90,6 +91,12 @@ list of `SearchResult` objects. It sends an HTTP request with `httpx`, checks
 the response, cleans the data (for example, HTML tags in Wikipedia snippets) and
 maps it to `SearchResult`.
 
+Source-specific extra data (GitHub stars and language, Stack Overflow score,
+answer count and the accepted-answer mark) is built by the provider itself and
+put into the `description` text, so the bot does not need to know anything about
+individual sources. Fields that the API does not return are simply left out:
+no `None` or empty separators appear in the reply.
+
 The providers are registered in the `DICT_OF_SOURCES` dictionary in
 `search_service.py` (source name -> provider function). To add a source, write a
 new provider and add it to the dictionary.
@@ -136,7 +143,9 @@ All values live in `config.py`:
   `httpx` limits never fire.
 
 The `httpx` limits are lower than `PROVIDER_TIMEOUT`, so the more informative
-`httpx` error normally fires first. The cap is applied to each provider
+`httpx` error normally fires first. The log line for a timeout contains the
+exception itself: `ReadTimeout` means an `httpx` limit fired, a bare
+`TimeoutError` means the `wait_for` cap fired. The cap is applied to each provider
 separately, not to the whole `gather`: if one provider times out, the results
 of the others are kept. A provider that timed out is logged and listed in
 `Unavailable: ...` like any other failed source.
@@ -227,9 +236,11 @@ Caveats:
 - GitHub search without a token is limited to about 10 requests per minute.
 - Wikipedia requires a descriptive `User-Agent` header; requests with a generic
   one are rejected.
-- The Stack Overflow description currently contains only the question score.
-- Long result lists may exceed Telegram's message length limit (about 4096
-  characters).
+- The extra data lives inside the `description` text, not in separate fields,
+  so results cannot be sorted or filtered by stars, score or answer count.
+- There is no protection against Telegram's message length limit (about 4096
+  characters). A typical reply is roughly 3000-3500 characters, but a query with
+  long descriptions may exceed the limit, and then Telegram rejects the message.
 - `search_all_sequential` does not handle provider failures and returns a plain
   list; it is used only for timing.
 - A provider that times out is reported as unavailable; the bot does not tell
@@ -248,7 +259,9 @@ Caveats:
 - [x] Partial failures: one source fails, the others still respond
 - [x] Timeouts for each provider
 - [x] Limiting concurrent requests under load (`asyncio.Semaphore`)
-- [ ] Richer results (GitHub stars and language, Stack Overflow answer count)
+- [x] Richer results (GitHub stars and language, Stack Overflow answer count
+  and accepted answer)
+- [ ] Optional: split or shorten replies that exceed Telegram's length limit
 - [ ] Optional: queue and workers
 
 ## Tech stack
