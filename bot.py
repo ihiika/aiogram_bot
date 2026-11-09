@@ -1,7 +1,6 @@
 import asyncio
 import os
 import logging
-from csv import excel_tab
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
@@ -22,7 +21,7 @@ async def cmd_start(message: Message) -> None:
     await message.answer("Hello, Im aiogram bot ")
 
 @dp.message(F.text)
-async def any_text(message: Message):
+async def any_text(message: Message) -> Message:
     query = message.text.strip()
     if not query:
         return await message.reply("The requested text is empty")
