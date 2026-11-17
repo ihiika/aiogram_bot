@@ -8,7 +8,7 @@ from models import SearchOutcome, SearchResult
 from providers.stackoverflow import search_stackoverflow
 from providers.wikipedia import search_wikipedia
 from providers.github import search_github
-from config import PROVIDER_TIMEOUT, DICT_OF_SOURCES_SEMAPHORE_LIMIT
+from config import PROVIDER_TIMEOUT, DEFAULT_SEMAPHORE_LIMIT, DICT_OF_SOURCES_SEMAPHORE_LIMIT
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,8 @@ DICT_OF_SOURCES =  {
 
 SEMAPHORE_BY_SOURCE = {}
 
-for name, limit in DICT_OF_SOURCES_SEMAPHORE_LIMIT.items():
-    SEMAPHORE_BY_SOURCE[name] = asyncio.Semaphore(limit)
+for name in DICT_OF_SOURCES:
+    SEMAPHORE_BY_SOURCE[name] = asyncio.Semaphore(DICT_OF_SOURCES_SEMAPHORE_LIMIT.get(name, DEFAULT_SEMAPHORE_LIMIT))
 
 async def search_with_limit(name: str, func: Callable[[str], Awaitable[Any]], query: str) -> list[SearchResult]:
     async with SEMAPHORE_BY_SOURCE[name]:

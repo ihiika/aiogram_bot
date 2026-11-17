@@ -31,7 +31,7 @@ async def search_github(query: str) -> list[SearchResult]:
         url = repository.get("html_url")
         stars = repository.get("stargazers_count")
         language = repository.get("language")
-        description = repository.get("description") or "no description"
+        description = repository.get("description") or ""
         extras = []
         if stars is not None:
             extras.append(f"Stars: {stars}")

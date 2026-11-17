@@ -27,7 +27,6 @@ async def any_text(message: Message) -> None:
     if not query:
         await message.reply("The requested text is empty")
         return
-    await message.answer(f"You were looking for: {query}")
     try:
         outcome = await search_all(query)
     except Exception:
