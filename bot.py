@@ -37,7 +37,7 @@ async def any_text(message: Message) -> None:
     answers_for_failed_sources = ""
     if outcome.results:
         for item in outcome.results:
-            list_of_records.append(f"{item.title}: {item.description} \nLink: {item.url} \nSource: {item.source}\n")
+            list_of_records.append(f"\n{item.title}: {item.description} \nLink: {item.url} \nSource: {item.source}\n")
     answers_for_records = split_records(list_of_records)
     if outcome.failed_sources:
         answers_for_failed_sources = "Unavailable: " + ", ".join(outcome.failed_sources)
