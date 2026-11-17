@@ -27,6 +27,8 @@ respond.
   still respond.
 - Per-source concurrency limits with `asyncio.Semaphore`, so many users at once
   do not flood the external sites.
+- Long replies are split into several Telegram messages, so the 4096-character
+  limit is never exceeded by a normal reply.
 - Basic input validation (empty messages) and error logging.
 - Type hints across the codebase.
 
@@ -35,9 +37,10 @@ respond.
 ```
 .
 ├── bot.py                     # aiogram bot: handlers and entry point
-├── config.py                  # timeout constants
+├── config.py                  # timeouts, semaphore limits, Telegram message limit
 ├── models.py                  # SearchResult and SearchOutcome dataclasses
 ├── search_service.py          # search_all (concurrent), search_all_sequential
+├── text_divider.py            # split_records: splits a reply into Telegram-sized parts
 ├── providers/
 │   ├── wikipedia.py           # Wikipedia provider
 │   ├── github.py              # GitHub provider
@@ -113,6 +116,17 @@ new provider and add it to the dictionary.
 exists only for timing comparison. It lists the providers by hand and does not
 use `DICT_OF_SOURCES`.
 
+### Long replies
+
+Telegram rejects messages longer than 4096 characters. Before sending,
+`text_divider.split_records` packs the formatted records into parts that fit the
+limit (`TELEGRAM_MESSAGE_LIMIT` in `config.py`). A record is never cut in the
+middle: if the next record does not fit into the current part, a new part is
+started. The bot sends every part as a separate message. If some sources are
+unavailable, the `Unavailable: ...` line is sent as a separate last message.
+
+A typical reply (about 3000 characters) fits into one message.
+
 ## Handling failures
 
 `asyncio.gather` is called with `return_exceptions=True`, so an exception in one
@@ -123,7 +137,7 @@ on the situation:
 | Situation | Bot reply |
 |---|---|
 | Results found, all sources responded | The results |
-| Results found, some sources failed | The results and an `Unavailable: ...` line |
+| Results found, some sources failed | The results, then a separate `Unavailable: ...` message |
 | No results, some sources failed | A note that nothing was found and which sources are unavailable |
 | No results, all sources responded | `No results found` |
 | All sources failed | `All sources failed. Try again later` |
@@ -145,10 +159,10 @@ All values live in `config.py`:
 The `httpx` limits are lower than `PROVIDER_TIMEOUT`, so the more informative
 `httpx` error normally fires first. The log line for a timeout contains the
 exception itself: `ReadTimeout` means an `httpx` limit fired, a bare
-`TimeoutError` means the `wait_for` cap fired. The cap is applied to each provider
-separately, not to the whole `gather`: if one provider times out, the results
-of the others are kept. A provider that timed out is logged and listed in
-`Unavailable: ...` like any other failed source.
+`TimeoutError` means the `wait_for` cap fired. The cap is applied to each
+provider separately, not to the whole `gather`: if one provider times out, the
+results of the others are kept. A provider that timed out is logged and listed
+in `Unavailable: ...` like any other failed source.
 
 ## Concurrency limits (Semaphore)
 
@@ -238,9 +252,10 @@ Caveats:
   one are rejected.
 - The extra data lives inside the `description` text, not in separate fields,
   so results cannot be sorted or filtered by stars, score or answer count.
-- There is no protection against Telegram's message length limit (about 4096
-  characters). A typical reply is roughly 3000-3500 characters, but a query with
-  long descriptions may exceed the limit, and then Telegram rejects the message.
+- A single record that is longer than the Telegram limit is not cut; such a
+  record is unlikely (descriptions are short), but Telegram would reject that
+  message.
+- A long reply arrives as several messages instead of one.
 - `search_all_sequential` does not handle provider failures and returns a plain
   list; it is used only for timing.
 - A provider that times out is reported as unavailable; the bot does not tell
@@ -261,7 +276,7 @@ Caveats:
 - [x] Limiting concurrent requests under load (`asyncio.Semaphore`)
 - [x] Richer results (GitHub stars and language, Stack Overflow answer count
   and accepted answer)
-- [ ] Optional: split or shorten replies that exceed Telegram's length limit
+- [x] Splitting long replies into several Telegram messages
 - [ ] Optional: queue and workers
 
 ## Tech stack
